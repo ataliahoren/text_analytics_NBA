@@ -9,7 +9,7 @@
 ## 1. setup
 
 ### working directory
-setwd("~/Documents/MsBA/textAnalytics/Cases/1_NBA/text_analytics_NBA/data")
+setwd("~/Documents/MsBA/textAnalytics/Cases/text_analytics_NBA/data")
 
 ### Load the needed libraries
 library(tm)
@@ -17,6 +17,7 @@ library(qdap)
 library(plyr)
 library(pbapply)
 library(stringr)
+library(stringi)
 
 ### Options & Functions
 options(stringsAsFactors = FALSE)
@@ -30,7 +31,14 @@ tryTolower <- function(x){
   return(y)
 }
 
+remove_UTF8_dots <- function(x){
+  y <- iconv(x, "UTF-8", "ASCII", ".")
+  y <- gsub("[[:punct:]]+", ' ', y)
+  return(y)
+}
+
 cleanCorpus<-function(corpus, customStopwords){
+  corpus <- tm_map(corpus, content_transformer(remove_UTF8_dots))
   corpus <- tm_map(corpus, content_transformer(qdapRegex::rm_url))
   corpus <- tm_map(corpus, content_transformer(replace_contraction)) 
   corpus <- tm_map(corpus, removeNumbers)
@@ -62,13 +70,13 @@ top3_NBA_teams <- c('Los Angeles Lakers', 'Golden State Warriors', 'Chicago Bull
 #### Create custom stop words
 stops <- c(stopwords('SMART'), 'nba', tryTolower(top3_NBA_teams), unlist(strsplit(tryTolower(top3_NBA_teams), " "), use.names=FALSE), 
            'basketball', 'amp', 'game', 'games', 'team', 'sports', 'team', 'teams', 'play', 'playing', 'player', 'points', 'fans', 'move',
-           'time', 'years', 'year', 'thinking', 'the')
+           'time', 'years', 'year', 'thinking', 'the', 'season')
 
 #### filter the data for only the top top10_NBA_teams
 pre_covid_data <- subset(pre_covid_data, team %in% top3_NBA_teams)
 post_covid_data <- subset(post_covid_data, team %in% top3_NBA_teams)
 
-#### 7-9% of the posts are with the top 10 MbA team before and after covid.
+#### ~8% of the posts are with the top 10 MbA team before and after covid.
 nrow(pre_covid_data)/befor_filter_pre_covid_data
 nrow(post_covid_data)/befor_filter_post_covid_data
 
@@ -100,9 +108,18 @@ post_covid_data <- paste(post_covid_data, collapse = ' ')
 allTweets <- c(pre_covid_data, post_covid_data)
 allTweets <- VCorpus((VectorSource(allTweets)))
 
+pre_covid <- VCorpus((VectorSource(pre_covid_data)))
+post_covid <- VCorpus((VectorSource(post_covid_data)))
+
 ### structure the data
 tweetTDM  <- TermDocumentMatrix(allTweets)
 tweetTDMm <- as.matrix(tweetTDM)
+
+pre_covidTDM  <- TermDocumentMatrix(pre_covid)
+post_covidTDM  <- TermDocumentMatrix(post_covid)
+
+pre_covidTDMm <- as.matrix(pre_covidTDM)
+post_covidTDMm <- as.matrix(post_covidTDM)
 
 ### Make sure order is the same as the c(objA, objB) 
 colnames(tweetTDMm) <- c('pre_covid', 'post_covid')
@@ -115,7 +132,7 @@ library(RColorBrewer)
 library(ggplot2)
 library(ggthemes)
 
-## Visualization 1. barplot of the most frequent words
+## Visualization 1. barplot of the most frequent words - all tweets
 
 ### frequency analysis
 tweetSums <- rowSums(tweetTDMm)
@@ -125,39 +142,81 @@ tweetFreq <- data.frame(word=names(tweetSums),frequency=tweetSums)
 rownames(tweetFreq) <- NULL
 
 ### top frequent word
-orderWords <- tweetFreq[order(tweetFreq$frequency, decreasing = T),]
-
 ### sunset for a smaller data to plot based on condition
-topWords <- subset(tweetFreq, tweetFreq$frequency >= 150) 
-topWords  <- topWords[order(topWords$frequency, decreasing=F),]
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 200) 
+topWords  <- topWords[order(topWords$frequency, decreasing= T),]
+head(topWords, 15)
+
+###change frequency to include only the top 15 wwords
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 246) 
+topWords  <- topWords[order(topWords$frequency, decreasing= F),]
 
 ###  Chg to factor for ggplot
 topWords$word <- factor(topWords$word, levels=unique(as.character(topWords$word))) 
 
 ### visualization - Simple barplot
 ggplot(topWords, aes(x=word, y=frequency)) + 
-  geom_bar(stat="identity", fill='darkred') + 
+  geom_bar(stat="identity", fill='#FF4500') + 
   coord_flip()+ theme_gdocs() +
   geom_text(aes(label=frequency), colour="white",hjust=1.25, size=3.0)
 
-## Visualization 2. scatterplots association with the most frequent word 'chenle'
+## Visualization 2. barplot of the most frequent words - pre_covid tweets
 
-### Inspect word associations
-associations <- findAssocs(tweetTDM, 'chenle', 0.50)
+### frequency analysis
+tweetSums <- rowSums(pre_covidTDMm)
+tweetFreq <- data.frame(word=names(tweetSums),frequency=tweetSums)
 
-### Organize the word associations
-assocDF <- data.frame(terms=names(associations[[1]]),
-                      value=unlist(associations))
-assocDF$terms <- factor(assocDF$terms, levels=assocDF$terms)
-rownames(assocDF) <- NULL
+###  Remove the row attributes meta family
+rownames(tweetFreq) <- NULL
 
-### Make a scatterplots
-ggplot(assocDF, aes(y=terms)) +
-  geom_point(aes(x=value), data=assocDF, col='#c00c00') +
-  theme_gdocs() + 
-  geom_text(aes(x=value,label=value), colour="red",hjust="inward", vjust ="inward" , size=3) 
+### top frequent word
+### sunset for a smaller data to plot based on condition
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 100) 
+topWords  <- topWords[order(topWords$frequency, decreasing= T),]
+head(topWords, 15)
 
-## Visualization 3. common cloud - what is mutual pre and post covid?
+###change frequency to include only the top 15 wwords
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 124) 
+topWords  <- topWords[order(topWords$frequency, decreasing= F),]
+
+###  Chg to factor for ggplot
+topWords$word <- factor(topWords$word, levels=unique(as.character(topWords$word))) 
+
+### visualization - Simple barplot
+ggplot(topWords, aes(x=word, y=frequency)) + 
+  geom_bar(stat="identity", fill='#008000') + 
+  coord_flip()+ theme_gdocs() +
+  geom_text(aes(label=frequency), colour="white",hjust=1.25, size=3.0)
+
+## Visualization 3. barplot of the most frequent words - post_covid tweets
+
+### frequency analysis
+tweetSums <- rowSums(post_covidTDMm)
+tweetFreq <- data.frame(word=names(tweetSums),frequency=tweetSums)
+
+###  Remove the row attributes meta family
+rownames(tweetFreq) <- NULL
+
+### top frequent word
+### sunset for a smaller data to plot based on condition
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 100) 
+topWords  <- topWords[order(topWords$frequency, decreasing= T),]
+head(topWords, 15)
+
+###change frequency to include only the top 15 wwords
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 196) 
+topWords  <- topWords[order(topWords$frequency, decreasing= F),]
+
+###  Chg to factor for ggplot
+topWords$word <- factor(topWords$word, levels=unique(as.character(topWords$word))) 
+
+### visualization - Simple barplot
+ggplot(topWords, aes(x=word, y=frequency)) + 
+  geom_bar(stat="identity", fill='#8B0000') + 
+  coord_flip()+ theme_gdocs() +
+  geom_text(aes(label=frequency), colour="white",hjust=1.25, size=3.0)
+
+## Visualization 4. common cloud - what is mutual pre and post covid?
 
 ### Make a common cloud
 commonality.cloud(tweetTDMm, 
@@ -166,14 +225,14 @@ commonality.cloud(tweetTDMm,
                   colors='blue',
                   scale=c(3.5,0.25))
 
-## Visualization 4. comparison cloud - what has changed pre and post covid?
+## Visualization 5. comparison cloud - what has changed pre and post covid?
 
 ### Make a comparison cloud
 comparison.cloud(tweetTDMm, 
                  max.words=75, 
                  random.order=FALSE,
                  title.size=0.5,
-                 colors=brewer.pal(ncol(tweetTDMm),"Dark2"),
+                 colors=brewer.pal(ncol(tweetTDMm),"Accent"),
                  scale=c(3,0.1))
 
 #end
