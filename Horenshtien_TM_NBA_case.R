@@ -81,6 +81,7 @@ nrow(pre_covid_data)/befor_filter_pre_covid_data
 nrow(post_covid_data)/befor_filter_post_covid_data
 
 #### choose sample Tweets to reduce number of obs
+set.seed(1234)
 pre_covid_data = pre_covid_data[sample(nrow(pre_covid_data), 5000), ]
 post_covid_data = post_covid_data[sample(nrow(post_covid_data), 5000), ]
 
@@ -92,7 +93,6 @@ post_covid_data <- VCorpus(VectorSource(post_covid_data$text))
 
 pre_covid_data <- cleanCorpus(pre_covid_data, stops)
 post_covid_data <- cleanCorpus(post_covid_data, stops)
-print(8)
 
 ## 4. reorganized the data 
 
@@ -148,7 +148,7 @@ topWords  <- topWords[order(topWords$frequency, decreasing= T),]
 head(topWords, 15)
 
 ###change frequency to include only the top 15 wwords
-topWords <- subset(tweetFreq, tweetFreq$frequency >= 246) 
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 268) 
 topWords  <- topWords[order(topWords$frequency, decreasing= F),]
 
 ###  Chg to factor for ggplot
@@ -176,7 +176,7 @@ topWords  <- topWords[order(topWords$frequency, decreasing= T),]
 head(topWords, 15)
 
 ###change frequency to include only the top 15 wwords
-topWords <- subset(tweetFreq, tweetFreq$frequency >= 124) 
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 141) 
 topWords  <- topWords[order(topWords$frequency, decreasing= F),]
 
 ###  Chg to factor for ggplot
@@ -204,7 +204,7 @@ topWords  <- topWords[order(topWords$frequency, decreasing= T),]
 head(topWords, 15)
 
 ###change frequency to include only the top 15 wwords
-topWords <- subset(tweetFreq, tweetFreq$frequency >= 196) 
+topWords <- subset(tweetFreq, tweetFreq$frequency >= 218) 
 topWords  <- topWords[order(topWords$frequency, decreasing= F),]
 
 ###  Chg to factor for ggplot
